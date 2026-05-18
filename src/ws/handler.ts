@@ -3,12 +3,13 @@ import { IncomingMessage } from 'http';
 import { verifyToken, hashToken } from '../auth/jwt';
 import { ConnectionManager } from './connection';
 import { Config } from '../config';
-import { createLogger, Logger } from '../utils/logger';
+import { createLogger } from '../utils/logger';
 import { getDatabase } from '../db';
 import { agents, messages, agentTokens } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
-import type { Database } from 'drizzle-orm/better-sqlite3';
+
+type Logger = ReturnType<typeof createLogger>;
 
 export async function setupWebSocket(
   ws: WebSocket,

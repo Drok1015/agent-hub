@@ -1,0 +1,23 @@
+{
+  "name": "@agent-hub/sdk",
+  "version": "1.0.0",
+  "description": "Agent SDK for Agent Hub",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["agent", "hub", "sdk"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/ws": "^8.0.0",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,11 +1,12 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
-import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { loadConfig } from './config';
 import { initDatabase } from './db';
 import { createLogger } from './utils/logger';
 import { registerAgentsRoutes } from './routes/agents';
+import { registerTasksRoutes } from './routes/tasks';
+import { registerMessagesRoutes, registerStateRoutes } from './routes/messages';
 import { ConnectionManager } from './ws/connection';
 import { setupWebSocket } from './ws/handler';
 
@@ -45,9 +46,23 @@ async function main() {
   await registerAgentsRoutes(fastify, config);
   logger.info('HTTP routes registered');
   
+  const connectionManager = new ConnectionManager();
+  
+  // 注册任务路由
+  await registerTasksRoutes(fastify, config, connectionManager);
+  logger.info('Task routes registered');
+  
+  // 注册消息路由
+  await registerMessagesRoutes(fastify, config);
+  logger.info('Message routes registered');
+  
+  // 注册共享状态路由
+  await registerStateRoutes(fastify, config, connectionManager);
+  logger.info('State routes registered');
+  
   // 启动 HTTP 服务
   try {
-    const server = await fastify.listen({ port: parseInt(config.port), host: '0.0.0.0' });
+    await fastify.listen({ port: parseInt(config.port), host: '0.0.0.0' });
     logger.info(`Agent Hub is running on port ${config.port}`);
     
     // 创建 WebSocket 服务器
@@ -56,10 +71,8 @@ async function main() {
       maxPayload: 1048576,
     });
     
-    const connectionManager = new ConnectionManager();
-    
     // 处理 HTTP upgrade 请求
-    server.server.on('upgrade', (request, socket, head) => {
+    fastify.server.on('upgrade', (request, socket, head) => {
       const url = new URL(request.url || '', `http://${request.headers.host}`);
       
       if (url.pathname === '/ws') {
@@ -89,7 +102,7 @@ async function main() {
       }
     }, heartbeatInterval);
     
-    server.server.on('close', () => {
+    fastify.server.on('close', () => {
       clearInterval(interval);
       wss.close();
     });

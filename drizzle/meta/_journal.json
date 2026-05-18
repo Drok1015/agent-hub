@@ -1,0 +1,13 @@
+{
+  "version": "6",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1779123853740,
+      "tag": "0000_dapper_tana_nile",
+      "breakpoints": true
+    }
+  ]
+}

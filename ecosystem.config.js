@@ -1,0 +1,25 @@
+module.exports = {
+  apps: [{
+    name: 'agent-hub',
+    script: 'dist/index.js',
+    instances: 1,
+    exec_mode: 'fork',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000,
+      JWT_SECRET: 'your-production-secret-key-here',
+      JWT_EXPIRES_IN: '365d',
+      DB_PATH: './data/hub.db',
+      HEARTBEAT_TIMEOUT: 90000,
+      LOG_LEVEL: 'info',
+    },
+    error_file: './logs/error.log',
+    out_file: './logs/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss',
+    max_memory_restart: '500M',
+    restart_delay: 4000,
+    max_restarts: 10,
+    watch: false,
+    ignore_watch: ['node_modules', 'logs', 'data'],
+  }],
+};

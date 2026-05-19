@@ -20,9 +20,75 @@ const sharedStates: Map<string, SharedState> = new Map();
 
 export async function registerMessagesRoutes(
   fastify: FastifyInstance,
-  config: Config
+  config: Config,
+  connectionManager: ConnectionManager
 ) {
   const db = getDatabase();
+
+  // POST /api/v1/messages - 发送消息
+  fastify.post<{
+    Body: { to: string; content: any; channel?: string; type?: string; taskId?: string };
+  }>('/api/v1/messages', { preHandler: [(req, reply) => authMiddleware(req, reply, config)] }, async (request, reply) => {
+    const { to, content, channel = 'direct', type = 'text', taskId } = request.body;
+    const fromAgent = request.user!.agentId;
+
+    if (!to || !content) {
+      throw createError(errors.INVALID_REQUEST, 'to and content are required');
+    }
+
+    const targetAgent = db.select().from(agents).where(eq(agents.id, to)).get();
+    if (!targetAgent) {
+      throw createError(errors.AGENT_NOT_FOUND, `Target agent ${to} not found`);
+    }
+
+    const messageId = uuidv4();
+    const now = Date.now();
+
+    db.insert(messages).values({
+      id: messageId, fromAgent, toAgent: to, taskId: taskId || null,
+      channel, type, content: JSON.stringify(content), createdAt: now,
+    }).run();
+
+    connectionManager.send(to, {
+      type: 'message', id: messageId, timestamp: now,
+      payload: { from: fromAgent, channel, type, content },
+    });
+
+    return reply.status(201).send({
+      ok: true,
+      data: { id: messageId, fromAgent, toAgent: to, channel, type, content, createdAt: now },
+    });
+  });
+
+  // POST /api/v1/messages/broadcast - 广播消息
+  fastify.post<{
+    Body: { content: any; channel: string; type?: string };
+  }>('/api/v1/messages/broadcast', { preHandler: [(req, reply) => authMiddleware(req, reply, config)] }, async (request, reply) => {
+    const { content, channel = 'broadcast', type = 'text' } = request.body;
+    const fromAgent = request.user!.agentId;
+
+    if (!content) {
+      throw createError(errors.INVALID_REQUEST, 'content is required');
+    }
+
+    const messageId = uuidv4();
+    const now = Date.now();
+
+    db.insert(messages).values({
+      id: messageId, fromAgent, toAgent: null, taskId: null,
+      channel, type, content: JSON.stringify(content), createdAt: now,
+    }).run();
+
+    connectionManager.broadcastToChannel(channel, {
+      type: 'message', id: messageId, timestamp: now,
+      payload: { from: fromAgent, channel, type, content },
+    });
+
+    return reply.status(201).send({
+      ok: true,
+      data: { id: messageId, fromAgent, channel, type, content, createdAt: now },
+    });
+  });
   
   // GET /api/v1/messages - 获取消息历史
   fastify.get('/api/v1/messages', { preHandler: [(req, reply) => authMiddleware(req, reply, config)] }, async (request) => {
